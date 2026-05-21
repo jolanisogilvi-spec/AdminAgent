@@ -1,0 +1,113 @@
+groups:
+  - name: admin_agent_alerts
+    interval: 30s
+    rules:
+      # 服务可用性告警
+      - alert: ServiceDown
+        expr: up == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "服务 {{ $labels.job }} 已下线"
+          description: "{{ $labels.job }} 服务在 {{ $labels.instance }} 上已经下线超过2分钟"
+
+      # 高CPU使用率
+      - alert: HighCPUUsage
+        expr: 100 - (avg by(instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "CPU使用率过高"
+          description: "实例 {{ $labels.instance }} 的CPU使用率超过80%,当前值: {{ $value }}%"
+
+      # 高内存使用率
+      - alert: HighMemoryUsage
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "内存使用率过高"
+          description: "实例 {{ $labels.instance }} 的内存使用率超过85%,当前值: {{ $value }}%"
+
+      # 磁盘空间不足
+      - alert: DiskSpaceLow
+        expr: (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) * 100 < 15
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "磁盘空间不足"
+          description: "实例 {{ $labels.instance }} 的根分区剩余空间低于15%,当前值: {{ $value }}%"
+
+      # API响应时间过长
+      - alert: HighAPILatency
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "API响应时间过长"
+          description: "{{ $labels.method }} {{ $labels.path }} 的95分位响应时间超过1秒,当前值: {{ $value }}秒"
+
+      # 高错误率
+      - alert: HighErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) / rate(http_requests_total[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "API错误率过高"
+          description: "{{ $labels.job }} 的5xx错误率超过5%,当前值: {{ $value | humanizePercentage }}"
+
+      # 数据库连接池耗尽
+      - alert: DatabaseConnectionPoolExhausted
+        expr: db_connection_pool_used / db_connection_pool_size > 0.9
+        for: 3m
+        labels:
+          severity: critical
+        annotations:
+          summary: "数据库连接池接近耗尽"
+          description: "数据库连接池使用率超过90%,当前值: {{ $value | humanizePercentage }}"
+
+      # Redis内存使用过高
+      - alert: RedisMemoryHigh
+        expr: redis_memory_used_bytes / redis_memory_max_bytes > 0.9
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Redis内存使用率过高"
+          description: "Redis内存使用率超过90%,当前值: {{ $value | humanizePercentage }}"
+
+      # 容器重启频繁
+      - alert: ContainerRestartingFrequently
+        expr: rate(container_restart_count[15m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "容器频繁重启"
+          description: "容器 {{ $labels.container_name }} 在过去15分钟内重启频率过高"
+
+      # AI服务调用失败率高
+      - alert: AIServiceHighFailureRate
+        expr: rate(ai_service_requests_total{status="error"}[5m]) / rate(ai_service_requests_total[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "AI服务调用失败率过高"
+          description: "AI服务调用失败率超过10%,当前值: {{ $value | humanizePercentage }}"
+
+      # 工单处理积压
+      - alert: TicketBacklogHigh
+        expr: ticket_pending_count > 50
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: "工单积压过多"
+          description: "待处理工单数量超过50个,当前值: {{ $value }}"

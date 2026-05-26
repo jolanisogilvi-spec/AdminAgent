@@ -2,12 +2,6 @@
 
 Admin Agent 是一个面向企业行政、后勤和办公支持团队的内部管理系统。项目采用 FastAPI 后端和 React 前端，覆盖登录认证、智能助手、工单管理、审批中心、任务看板、资产管理、用户管理、知识库、系统设置和中文 API 文档。
 
-当前推荐本地访问端口为 `8030`。后端会托管前端构建产物，启动后可直接访问：
-
-```text
-http://localhost:8030/
-```
-
 默认登录账号：
 
 ```text
@@ -15,25 +9,138 @@ http://localhost:8030/
 密码：admin123
 ```
 
-## 快速启动
+## Docker 快速安装
 
-### 1. 启动后端
+推荐使用 Docker Compose v2，也就是 `docker compose` 命令。旧版 Docker Compose 可以把命令替换为 `docker-compose`。
+
+### 1. 安装 Docker
+
+安装 Docker Desktop 或 Docker Engine，并确认命令可用：
+
+```powershell
+docker --version
+docker compose version
+```
+
+### 2. 准备环境变量
+
+```powershell
+copy .env.example .env
+```
+
+按需编辑 `.env`：
+
+- `OPENAI_API_KEY`：智能助手需要的模型 API Key。
+- `SECRET_KEY`：生产环境必须替换为随机密钥。
+- `FRONTEND_HOST_PORT`：开发前端端口，默认 `3000`。
+- `BACKEND_HOST_PORT`：开发后端端口，默认 `8030`。
+- `WEB_PORT`：生产单入口端口，默认 `8030`。
+- `POSTGRES_HOST_PORT` / `REDIS_HOST_PORT`：数据库和缓存暴露端口，默认 `5432` / `6379`。
+
+### 3. 开发演示模式
+
+开发演示模式会启动 PostgreSQL、Redis、FastAPI 后端和 Vite 前端：
+
+```powershell
+docker compose up -d --build
+```
+
+访问地址：
+
+- 前端页面：http://localhost:3000/
+- 后端健康检查：http://localhost:8030/health
+- 中文 API 文档：http://localhost:8030/docs
+- OpenAPI JSON：http://localhost:8030/openapi.json
+
+如果端口被占用，修改 `.env` 中的 `FRONTEND_HOST_PORT` 或 `BACKEND_HOST_PORT` 后重新启动。
+
+### 4. 生产部署模式
+
+生产模式会构建前端静态资源，由 nginx 容器提供单入口访问，并将 API 请求代理到后端容器：
+
+```powershell
+docker compose -f docker-compose.prod.yml up -d --build
+```
+
+默认访问地址：
+
+- 应用入口：http://localhost:8030/
+- API 文档：http://localhost:8030/docs
+- OpenAPI JSON：http://localhost:8030/openapi.json
+
+如需换端口，修改 `.env` 中的 `WEB_PORT`。
+
+### 5. 局域网访问
+
+先查看本机 IPv4 地址：
+
+```powershell
+ipconfig
+```
+
+同一局域网设备可以使用：
+
+```text
+http://<本机IPv4>:3000/   # 开发演示前端
+http://<本机IPv4>:8030/   # 生产单入口或后端
+```
+
+如果无法访问，请确认 Windows 防火墙或服务器安全组已放行对应端口。
+
+### 6. 常用 Docker 命令
+
+```powershell
+# 查看服务状态
+docker compose ps
+
+# 查看日志
+docker compose logs -f
+docker compose logs -f backend
+docker compose logs -f frontend
+
+# 重启服务
+docker compose restart
+
+# 停止服务，保留数据卷
+docker compose down
+
+# 停止服务并删除数据卷
+docker compose down -v
+
+# 不使用缓存重建
+docker compose build --no-cache
+```
+
+生产模式把命令中的 `docker compose` 替换为：
+
+```powershell
+docker compose -f docker-compose.prod.yml
+```
+
+可选启动 pgAdmin：
+
+```powershell
+docker compose --profile tools up -d pgadmin
+```
+
+pgAdmin 默认地址：http://localhost:5050/
+
+## 本地开发启动
+
+如果不使用 Docker，也可以直接启动后端。后端会托管 `frontend/dist` 中的前端构建产物：
 
 ```powershell
 cd E:\agent\AdminAgent\backend
 python -m uvicorn app.main:app --host 127.0.0.1 --port 8030
 ```
 
-启动后可访问：
+访问地址：
 
 - 前端页面：http://localhost:8030/
 - 健康检查：http://localhost:8030/health
 - 中文 API 文档：http://localhost:8030/docs
-- OpenAPI JSON：http://localhost:8030/openapi.json
 
-### 2. 前端开发模式
-
-如果需要单独调试前端：
+单独调试前端：
 
 ```powershell
 cd E:\agent\AdminAgent\frontend
@@ -41,16 +148,12 @@ npm install --legacy-peer-deps
 npm run dev
 ```
 
-前端开发服务默认端口为 `3000`，接口代理到 `http://localhost:8030`。
-
-### 3. 前端构建
+构建前端：
 
 ```powershell
 cd E:\agent\AdminAgent\frontend
 npm run build
 ```
-
-构建产物输出到 `frontend/dist`。后端启动时会自动托管该目录中的页面和静态资源。
 
 ## 技术栈
 
@@ -61,7 +164,7 @@ npm run build
 - SQLModel / SQLAlchemy
 - Pydantic
 - JWT 登录认证
-- SQLite 本地数据库
+- SQLite / PostgreSQL
 - Redis 兼容缓存层
 - Chroma 向量检索
 - OpenAI 协议风格 AI 服务
@@ -76,82 +179,33 @@ npm run build
 - Zustand
 - Axios
 
-## 主要功能
-
-- 数据看板：展示工单、任务、资产和费用等核心指标。
-- 智能助手：支持行政知识问答和自然语言生成工单。
-- 工单管理：支持新建、筛选、查看、编辑、删除工单。
-- 任务看板：支持任务创建、筛选、状态流转、编辑和删除。
-- 审批中心：支持主管审批、财务审批、通过和驳回。
-- 资产管理：支持资产新增、筛选、详情、编辑、删除和库存调整。
-- 知识库：支持知识新增、编辑、删除、分类筛选、语义检索和向量同步。
-- 用户管理：支持添加用户、编辑用户、设置角色、启用/停用账号、重置密码和删除用户。
-- 系统设置：按业务分类维护基础设置、AI 模型、审批规则和知识库配置。
-- 接口文档：前端顶部提供“接口文档”按钮，可直接进入中文 Swagger 文档。
-
-## 系统设置说明
-
-系统设置页不再展示原始“配置键/配置值”表格，而是按业务分类直接填写：
-
-- 基础设置：系统名称、登录有效期、附件上传上限、自动分派工单。
-- AI 模型：模型服务地址、模型 API 密钥、模型名称、回复随机性、最大回复长度。
-- 审批规则：主管审批金额、财务审批金额。
-- 知识库：向量服务地址、知识向量模型、知识库索引目录。
-
-知识库中的向量服务地址使用独立配置 `EMBEDDING_BASE_URL`，不会和 AI 聊天模型的 `LLM_BASE_URL` 混用。
-
-## API 文档
-
-API 文档已整理为中文，入口：
-
-```text
-http://localhost:8030/docs
-```
-
-当前文档包含 10 个中文分组：
-
-- 认证登录
-- 用户管理
-- 工单管理
-- 资产管理
-- 任务管理
-- 审批管理
-- 知识库
-- 系统设置
-- 智能助手
-- 系统监控
-
-OpenAPI 中已补齐接口中文摘要、接口说明、参数说明、请求模型和响应模型标题。前端 SPA 兜底路由不会出现在 API 文档中。
-
 ## 项目结构
 
 ```text
 AdminAgent/
 ├─ backend/
 │  ├─ app/
-│  │  ├─ api/              # API 路由
-│  │  ├─ core/             # 配置、数据库、安全、OpenAPI 文档等核心能力
-│  │  ├─ models/           # 数据模型
-│  │  ├─ schemas/          # 请求和响应模型
-│  │  └─ services/         # 业务服务
+│  │  ├─ api/       # API 路由
+│  │  ├─ core/      # 配置、数据库、安全、OpenAPI 文档
+│  │  ├─ models/    # 数据模型
+│  │  ├─ schemas/   # 请求和响应模型
+│  │  └─ services/  # 业务服务
+│  ├─ Dockerfile
 │  └─ requirements.txt
 ├─ frontend/
 │  ├─ src/
-│  │  ├─ components/       # 通用组件
-│  │  ├─ layouts/          # 页面布局
-│  │  ├─ pages/            # 业务页面
-│  │  ├─ router/           # 路由
-│  │  ├─ services/         # 接口调用
-│  │  ├─ stores/           # 状态管理
-│  │  └─ theme/            # Ant Design 主题
-│  └─ package.json
-├─ 项目完整文档.md
+│  ├─ Dockerfile
+│  └─ nginx.conf
+├─ docker-compose.yml
+├─ docker-compose.prod.yml
 └─ README.md
 ```
 
 ## 常用验证命令
 
 ```powershell
+docker compose config
+docker compose -f docker-compose.prod.yml config
 python -m compileall -q backend\app
 
 cd frontend
@@ -166,7 +220,3 @@ npm run build
 - [前端文档](./frontend/README.md)
 - [部署文档](./DEPLOYMENT.md)
 - [测试文档](./TESTING.md)
-
-## 当前说明
-
-项目当前可在 `8030` 端口提供一体化访问。默认使用本地 SQLite 运行，适合快速开发和本地演示；Docker Compose 中仍保留 PostgreSQL、Redis、前后端分离部署等配置，可按部署环境继续调整。

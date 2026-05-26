@@ -40,30 +40,45 @@ code {
 }
 
 .app-logo {
-  gap: 10px;
-  padding: 0 14px;
+  gap: 8px;
+  padding: 0 10px;
   letter-spacing: 0;
+  overflow: hidden;
+}
+
+.app-logo-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  border: 1px solid rgba(103, 232, 249, 0.38);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 10px 24px rgba(8, 145, 178, 0.34);
+}
+
+.app-logo-mark img {
+  width: 19px;
+  height: 19px;
+  display: block;
+}
+
+.app-logo-text {
+  min-width: 0;
+  max-width: calc(100% - 36px);
+  overflow: hidden;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .ant-layout-sider-collapsed .app-logo {
   font-size: 0 !important;
-}
-
-.app-logo::before {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 30px;
-  height: 30px;
-  flex: 0 0 30px;
-  content: 'A';
-  font-size: 15px;
-  font-weight: 800;
-  color: #ecfeff;
-  border: 1px solid rgba(103, 232, 249, 0.45);
-  border-radius: 8px;
-  background: linear-gradient(135deg, rgba(8, 145, 178, 0.94), rgba(37, 99, 235, 0.9));
-  box-shadow: 0 10px 24px rgba(8, 145, 178, 0.34);
 }
 
 .app-sider .ant-menu {

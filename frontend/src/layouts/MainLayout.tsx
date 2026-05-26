@@ -70,13 +70,16 @@ const MainLayout = () => {
             height: 64,
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center',
+            justifyContent: collapsed ? 'center' : 'flex-start',
             fontSize: collapsed ? 16 : 20,
             fontWeight: 700,
             color: '#fff',
           }}
         >
-          {collapsed ? '行政' : '行政智能体'}
+          <span className="app-logo-mark" aria-hidden="true">
+            <img src="https://www.thingo.com.cn/logo.svg" alt="" />
+          </span>
+          {!collapsed && <span className="app-logo-text">Thingo 行政智能体</span>}
         </div>
         <Menu
           theme="dark"
